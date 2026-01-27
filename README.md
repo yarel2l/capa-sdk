@@ -1,5 +1,9 @@
 # CAPA SDK
 
+[![PyPI version](https://img.shields.io/pypi/v/capa-sdk.svg)](https://pypi.org/project/capa-sdk/)
+[![Python versions](https://img.shields.io/pypi/pyversions/capa-sdk.svg)](https://pypi.org/project/capa-sdk/)
+[![License](https://img.shields.io/pypi/l/capa-sdk.svg)](https://github.com/yarel2l/capa-sdk/blob/master/LICENSE)
+
 **Craniofacial Analysis & Prediction Architecture**
 
 A Python SDK for advanced craniofacial analysis based on 15+ peer-reviewed scientific papers.
