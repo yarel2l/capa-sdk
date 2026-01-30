@@ -158,3 +158,6 @@ credentials/
 # -----------------------------------------------------------------------------
 .claude/
 
+
+# Experiments (local testing)
+experiments/
