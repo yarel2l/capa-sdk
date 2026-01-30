@@ -374,14 +374,46 @@ class MorphologyAnalyzer:
         
         logger.info(f"Morphology Analyzer v{self.version} initialized")
     
+    def _find_dlib_model(self):
+        """Find dlib shape predictor model file in multiple locations"""
+        import os
+        from pathlib import Path
+
+        model_name = "shape_predictor_68_face_landmarks.dat"
+        search_paths = [
+            model_name,  # Current directory
+            os.path.join(os.path.dirname(__file__), model_name),  # Module directory
+            os.path.join(os.path.dirname(__file__), "..", model_name),  # Parent directory
+        ]
+
+        # Try to find in face_recognition_models package
+        try:
+            import face_recognition_models
+            models_path = Path(face_recognition_models.__file__).parent / "models" / model_name
+            search_paths.append(str(models_path))
+        except ImportError:
+            pass
+
+        # Search all paths
+        for path in search_paths:
+            if os.path.exists(path):
+                return path
+
+        return None
+
     def _init_detectors(self):
         """Initialize multi-detector systems for morphology analysis"""
         # dlib detector for facial landmarks
         try:
-            self.dlib_predictor = dlib.shape_predictor("shape_predictor_68_face_landmarks.dat")
-            self.dlib_detector = dlib.get_frontal_face_detector()
-            self.dlib_available = True
-            logger.info("dlib detector initialized for morphology analysis")
+            dlib_model_path = self._find_dlib_model()
+            if dlib_model_path:
+                self.dlib_predictor = dlib.shape_predictor(dlib_model_path)
+                self.dlib_detector = dlib.get_frontal_face_detector()
+                self.dlib_available = True
+                logger.info(f"dlib detector initialized for morphology analysis from {dlib_model_path}")
+            else:
+                logger.warning("dlib shape predictor model not found for morphology analysis")
+                self.dlib_available = False
         except Exception as e:
             logger.warning(f"dlib detector not available: {e}")
             self.dlib_available = False
@@ -1688,63 +1720,83 @@ class MorphologyAnalyzer:
         symmetry = features.bilateral_symmetry_score
 
         # Calculate shape scores for each face type
+        # ============================================================================
+        # FIX MOR-001: Recalibrated thresholds for better classification diversity
+        # ============================================================================
         shape_scores = {}
 
         # OVAL: Balanced face, slightly longer than wide
+        # FIX MOR-001: Expanded facial_index range (was 84-92, now 84-105)
         oval_score = 0.0
-        if 84 <= facial_index <= 92:
-            oval_score += 0.3
-        if 1.1 <= cone_index <= 1.3:
+        if 84 <= facial_index <= 105:
+            # Graduated scoring: closer to 90 = higher score
+            if 88 <= facial_index <= 96:
+                oval_score += 0.35  # Ideal oval range
+            else:
+                oval_score += 0.2   # Extended range
+        if 1.1 <= cone_index <= 1.35:  # Slightly expanded (was 1.3)
             oval_score += 0.25
-        if 0.4 <= jawline_curvature <= 0.6:
+        if 0.35 <= jawline_curvature <= 0.65:  # Slightly expanded
             oval_score += 0.25
-        if 0.65 <= width_height_ratio <= 0.8:
-            oval_score += 0.2
+        if 0.6 <= width_height_ratio <= 0.85:  # Slightly expanded
+            oval_score += 0.15
         shape_scores[FaceShape.OVAL] = min(1.0, oval_score)
 
         # ROUND: Face width close to length, soft curves
         round_score = 0.0
-        if facial_index < 85:
+        if facial_index < 88:  # Expanded (was 85)
             round_score += 0.3
-        if cone_index < 1.15:
+        if cone_index < 1.18:  # Slightly expanded (was 1.15)
             round_score += 0.25
-        if jawline_curvature > 0.5:
+        if jawline_curvature > 0.45:  # Slightly expanded (was 0.5)
             round_score += 0.25
-        if width_height_ratio > 0.8:
+        if width_height_ratio > 0.78:  # Slightly expanded (was 0.8)
             round_score += 0.2
         shape_scores[FaceShape.ROUND] = min(1.0, round_score)
 
         # SQUARE: Angular jaw, width close to length
         square_score = 0.0
-        if 78 <= facial_index <= 88:
+        if 78 <= facial_index <= 92:  # Expanded (was 88)
             square_score += 0.25
-        if cone_index < 1.15:
+        if cone_index < 1.18:  # Slightly expanded (was 1.15)
             square_score += 0.25
         if jawline_curvature < 0.4:
             square_score += 0.3  # Angular = low curvature
-        if features.gonial_angle < 120:
+        if features.gonial_angle < 125:  # Slightly expanded (was 120)
             square_score += 0.2
         shape_scores[FaceShape.SQUARE] = min(1.0, square_score)
 
         # RECTANGULAR/OBLONG: Long face, angular
+        # FIX MOR-001: Better capture of elongated faces
         oblong_score = 0.0
-        if facial_index > 93:
-            oblong_score += 0.4
-        if width_height_ratio < 0.7:
+        if facial_index > 95:  # Slightly higher threshold (was 93)
+            oblong_score += 0.35
+        elif facial_index > 90:  # Partial score for moderately elongated
+            oblong_score += 0.15
+        if width_height_ratio < 0.72:  # Slightly adjusted (was 0.7)
             oblong_score += 0.3
         if jawline_curvature < 0.5:
-            oblong_score += 0.3
+            oblong_score += 0.25
+        # Bonus for very high facial_index (hyperleptoprosopic)
+        if facial_index > 105:
+            oblong_score += 0.2
         shape_scores[FaceShape.OBLONG] = min(1.0, oblong_score)
         shape_scores[FaceShape.RECTANGULAR] = min(1.0, oblong_score * 0.9)
 
         # HEART: Wide forehead/cheekbones, narrow chin
+        # FIX MOR-001: More restrictive thresholds to reduce over-classification
         heart_score = 0.0
-        if cone_index > 1.25:
-            heart_score += 0.4
-        if proportions.bizygomatic_width > proportions.bigonial_width * 1.2:
-            heart_score += 0.3
-        if features.chin_projection < 0.4:
-            heart_score += 0.3
+        if cone_index > 1.38:  # More restrictive (was 1.25)
+            heart_score += 0.35
+        elif cone_index > 1.30:  # Partial score
+            heart_score += 0.15
+        if proportions.bizygomatic_width > proportions.bigonial_width * 1.28:  # More restrictive (was 1.2)
+            heart_score += 0.25
+        if features.chin_projection < 0.35:  # More restrictive (was 0.4)
+            heart_score += 0.25
+        # Require pointed chin for heart shape
+        if features.chin_projection < 0.25:
+            heart_score += 0.15
         shape_scores[FaceShape.HEART] = min(1.0, heart_score)
 
         # DIAMOND: Wide cheekbones, narrow forehead and chin
