@@ -7,7 +7,7 @@ name = "capa-sdk"
 version = "1.1.0"
 description = "CAPA - Craniofacial Analysis & Prediction Architecture SDK"
 readme = "README.md"
-license = {text = "MIT"}
+license = {text = "Proprietary - Dual License (Non-Commercial Free / Commercial Paid)"}
 requires-python = ">=3.9"
 authors = [
     {name = "CAPA Team"}
@@ -23,7 +23,7 @@ classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "Intended Audience :: Science/Research",
-    "License :: OSI Approved :: MIT License",
+    "License :: Other/Proprietary License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.9",

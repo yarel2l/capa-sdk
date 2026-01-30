@@ -78,7 +78,7 @@ result = analyzer.analyze_multiple_angles(
 )
 
 print(f"Combined Confidence: {result.combined_confidence*100:.1f}%")
-print(f"Angles Analyzed: {result.angles_analyzed}")
+print(f"Angles Analyzed: {list(result.angle_results.keys())}")
 
 analyzer.shutdown()
 ```
@@ -107,7 +107,7 @@ from capa.modules import WDAnalyzer
 image = cv2.imread("photo.jpg")
 analyzer = WDAnalyzer()
 
-result = analyzer.analyze(image)
+result = analyzer.analyze_image(image)
 
 if result:
     print(f"WD Value: {result.wd_value:.3f}")
@@ -129,14 +129,14 @@ from capa.modules import ForeheadAnalyzer
 image = cv2.imread("profile.jpg")
 analyzer = ForeheadAnalyzer()
 
-result = analyzer.analyze(image)
+result = analyzer.analyze_image(image)
 
 if result:
     geometry = result.forehead_geometry
     print(f"Slant Angle: {geometry.slant_angle_degrees:.1f}°")
     print(f"Forehead Height: {geometry.forehead_height:.1f}px")
     print(f"Forehead Width: {geometry.forehead_width:.1f}px")
-    print(f"Curvature Radius: {geometry.curvature_radius:.1f}px")
+    print(f"Forehead Curvature: {geometry.forehead_curvature:.2f}")
     print(f"Impulsiveness Level: {result.impulsiveness_level.value}")
 ```
 
@@ -149,7 +149,7 @@ from capa.modules import MorphologyAnalyzer
 image = cv2.imread("photo.jpg")
 analyzer = MorphologyAnalyzer()
 
-result = analyzer.analyze(image)
+result = analyzer.analyze_image(image)
 
 if result:
     # Face shape
@@ -161,9 +161,6 @@ if result:
     props = result.facial_proportions
     print(f"Facial Index: {props.facial_index:.1f}")
     print(f"Width/Height Ratio: {props.facial_width_height_ratio:.3f}")
-
-    # Prosopic classification
-    print(f"Prosopic Type: {props.prosopic_classification.value}")
 ```
 
 ### Neoclassical Canons Analyzer
@@ -175,7 +172,7 @@ from capa.modules import NeoclassicalCanonsAnalyzer
 image = cv2.imread("photo.jpg")
 analyzer = NeoclassicalCanonsAnalyzer()
 
-result = analyzer.analyze(image)
+result = analyzer.analyze_image(image)
 
 if result:
     print(f"Overall Harmony: {result.overall_harmony_score*100:.1f}%")
@@ -237,8 +234,8 @@ image = cv2.imread("photo.jpg")
 
 analyzer = CoreAnalyzer()
 
-# Analyze directly from array
-result = analyzer.analyze_array(image)
+# analyze_image accepts both file paths and numpy arrays
+result = analyzer.analyze_image(image)
 
 analyzer.shutdown()
 ```

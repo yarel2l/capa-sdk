@@ -2,7 +2,8 @@
 
 [![PyPI version](https://img.shields.io/pypi/v/capa-sdk.svg)](https://pypi.org/project/capa-sdk/)
 [![Python versions](https://img.shields.io/pypi/pyversions/capa-sdk.svg)](https://pypi.org/project/capa-sdk/)
-[![License](https://img.shields.io/pypi/l/capa-sdk.svg)](https://github.com/yarel2l/capa-sdk/blob/master/LICENSE)
+[![License](https://img.shields.io/badge/License-Dual%20(Non--Commercial%20Free)-blue.svg)](https://github.com/yarel2l/capa-sdk/blob/master/LICENSE)
+[![Patent](https://img.shields.io/badge/Patent-US%2010%2C885%2C309-green.svg)](https://patents.google.com/patent/US10885309B1)
 
 **Craniofacial Analysis & Prediction Architecture**
 
@@ -184,6 +185,18 @@ CAPA is built on 15+ peer-reviewed scientific papers. All referenced papers are 
 - Gonzalez-Jose, R. et al. (2005). Functional-craniology approach to the influence of economic strategy on skull morphology. *American Journal of Physical Anthropology*.
 - Kolar, J.C. & Salter, E.M. (1997). *Craniofacial Anthropometry: Practical Measurement of the Head and Face for Clinical, Surgical, and Research Use*. Charles C Thomas Publisher.
 
+## Documentation
+
+Full documentation is available in the [`docs/`](docs/) directory:
+
+| Document | Description |
+|----------|-------------|
+| [Getting Started](docs/getting_started.md) | Installation and basic usage |
+| [Configuration](docs/configuration.md) | Analysis modes and settings |
+| [API Reference](docs/api_reference.md) | Complete API documentation |
+| [Scientific Foundation](docs/scientific_foundation.md) | Research papers and methodology |
+| [Examples](docs/examples.md) | Code examples and use cases |
+
 ## API Reference
 
 ### Main Classes
@@ -222,7 +235,29 @@ See the `examples/` directory for complete usage examples:
 
 ## License
 
-MIT License
+**Dual License - See [LICENSE](LICENSE) for full terms**
+
+| Use Type | License | Cost |
+|----------|---------|------|
+| Personal projects | Non-Commercial License | Free |
+| Academic research | Non-Commercial License | Free |
+| Educational use | Non-Commercial License | Free |
+| Non-profit internal use | Non-Commercial License | Free |
+| **Commercial use** | **Commercial License Required** | Contact us |
+
+### Patent Notice
+
+This software implements methods covered by **US Patent 10,885,309**:
+*"System and method for evaluating personality using anthropometric measurement of a person's face"*
+
+The Non-Commercial License includes a limited patent license for non-commercial use only.
+Commercial use without a Commercial License may constitute patent infringement.
+
+### Commercial Licensing
+
+For commercial licensing inquiries, contact:
+- Email: yarelleyva2@gmail.com
+- GitHub: [Open an issue](https://github.com/yarel2l/capa-sdk/issues)
 
 ## Contributing
 

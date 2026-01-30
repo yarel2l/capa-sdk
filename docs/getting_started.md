@@ -167,19 +167,19 @@ image = cv2.imread("photo.jpg")
 
 # WD Analysis
 wd_analyzer = WDAnalyzer()
-wd_result = wd_analyzer.analyze(image)
+wd_result = wd_analyzer.analyze_image(image)
 if wd_result:
     print(f"WD: {wd_result.wd_value:.3f}")
 
 # Forehead Analysis
 forehead_analyzer = ForeheadAnalyzer()
-forehead_result = forehead_analyzer.analyze(image)
+forehead_result = forehead_analyzer.analyze_image(image)
 if forehead_result:
     print(f"Angle: {forehead_result.forehead_geometry.slant_angle_degrees:.1f}°")
 
 # Morphology Analysis
 morphology_analyzer = MorphologyAnalyzer()
-morphology_result = morphology_analyzer.analyze(image)
+morphology_result = morphology_analyzer.analyze_image(image)
 if morphology_result:
     print(f"Shape: {morphology_result.shape_classification.primary_shape.value}")
 ```

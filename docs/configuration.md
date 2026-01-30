@@ -24,11 +24,19 @@ config = AnalysisConfiguration(
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `mode` | `AnalysisMode` | `STANDARD` | Analysis mode (speed vs accuracy) |
+| `result_format` | `ResultFormat` | `STRUCTURED` | Output format for results |
 | `enable_wd_analysis` | `bool` | `True` | Enable WD (bizygomatic) analysis |
 | `enable_forehead_analysis` | `bool` | `True` | Enable forehead/impulsiveness analysis |
 | `enable_morphology_analysis` | `bool` | `True` | Enable face shape analysis |
-| `min_confidence_threshold` | `float` | `0.5` | Minimum confidence to return results |
-| `enable_quality_checks` | `bool` | `True` | Enable image quality validation |
+| `enable_neoclassical_analysis` | `bool` | `True` | Enable neoclassical canons analysis |
+| `enable_quality_assessment` | `bool` | `True` | Enable image quality validation |
+| `enable_continuous_learning` | `bool` | `True` | Enable adaptive learning system |
+| `learning_mode` | `LearningMode` | `BALANCED` | Learning mode for adaptation |
+| `enable_parallel_processing` | `bool` | `True` | Enable parallel module execution |
+| `max_worker_threads` | `int` | `4` | Maximum threads for parallel processing |
+| `subject_age` | `int` | `None` | Optional subject age for normalization |
+| `subject_gender` | `str` | `None` | Optional subject gender for normalization |
+| `subject_ethnicity` | `str` | `None` | Optional subject ethnicity for normalization |
 
 ---
 
@@ -54,20 +62,23 @@ AnalysisMode.SCIENTIFIC
 # Research mode - includes all correlations
 AnalysisMode.RESEARCH
 
-# Realtime mode - optimized for video
+# Realtime mode - for video streams (NOT YET IMPLEMENTED)
 AnalysisMode.REALTIME
 ```
 
 ### Mode Comparison
 
-| Mode | Speed | Accuracy | Detectors | Use Case |
-|------|-------|----------|-----------|----------|
-| `FAST` | ★★★★★ | ★★★☆☆ | 1-2 | Real-time apps |
-| `STANDARD` | ★★★★☆ | ★★★★☆ | 2-3 | General use |
-| `THOROUGH` | ★★★☆☆ | ★★★★★ | All | Detailed reports |
-| `SCIENTIFIC` | ★★★☆☆ | ★★★★★ | All | Research (2D only) |
-| `RESEARCH` | ★★☆☆☆ | ★★★★★ | All | Academic studies |
-| `REALTIME` | ★★★★★ | ★★☆☆☆ | 1 | Video streams |
+| Mode | Speed | Accuracy | Detectors | Use Case | Status |
+|------|-------|----------|-----------|----------|--------|
+| `FAST` | ★★★★★ | ★★★☆☆ | 1-2 | Real-time apps | ✅ Implemented |
+| `STANDARD` | ★★★★☆ | ★★★★☆ | 2-3 | General use | ✅ Implemented |
+| `THOROUGH` | ★★★☆☆ | ★★★★★ | All | Detailed reports | ✅ Implemented |
+| `SCIENTIFIC` | ★★★☆☆ | ★★★★★ | All | Research (2D only) | ✅ Implemented |
+| `RESEARCH` | ★★☆☆☆ | ★★★★★ | All | Academic studies | ✅ Implemented |
+| `REALTIME` | ★★★★★ | ★★☆☆☆ | 1 | Video streams | ⚠️ Not Implemented |
+
+> **Note:** `REALTIME` mode is reserved for future video stream processing capabilities.
+> Currently it behaves identically to `STANDARD` mode. Video processing features are planned for a future release.
 
 ### Mode Examples
 
@@ -83,8 +94,129 @@ thorough_config = AnalysisConfiguration(mode=AnalysisMode.THOROUGH)
 # For academic research
 research_config = AnalysisConfiguration(mode=AnalysisMode.RESEARCH)
 
-# For live video processing
-realtime_config = AnalysisConfiguration(mode=AnalysisMode.REALTIME)
+# For scientific publications (2D observables only)
+scientific_config = AnalysisConfiguration(mode=AnalysisMode.SCIENTIFIC)
+```
+
+---
+
+## Mode Output Differences
+
+Different analysis modes return different data in the results. This section explains what to expect from each mode.
+
+### Output by Mode
+
+| Field/Feature | STANDARD | FAST | THOROUGH | SCIENTIFIC | RESEARCH |
+|---------------|:--------:|:----:|:--------:|:----------:|:--------:|
+| **WD Analysis** |
+| `wd_value` | ✅ | ✅ | ✅ | ✅ | ✅ |
+| `primary_classification` | ✅ | ✅ | ✅ | ❌ | ✅ |
+| `personality_profile` | ✅ | ✅ | ✅ | ❌ | ✅ |
+| **Forehead Analysis** |
+| `slant_angle_degrees` | ✅ | ✅ | ✅ | ✅ | ✅ |
+| `impulsiveness_level` | ✅ | ✅ | ✅ | ❌ | ✅ |
+| `neuroscience_correlations` | ✅ | ✅ | ✅ | ❌ | ✅ |
+| **Morphology Analysis** |
+| `face_shape` | ✅ | ✅ | ✅ | ✅ | ✅ |
+| `3d_reconstruction` | ❌ | ❌ | ✅ | ✅ | ✅ |
+| **Additional** |
+| `research_disclaimers` | ❌ | ❌ | ❌ | ❌ | ✅ |
+| Early abort on poor landmarks | ❌ | ✅ | ❌ | ❌ | ❌ |
+
+### SCIENTIFIC Mode
+
+The `SCIENTIFIC` mode is designed for peer-reviewed research and academic publications. It returns **only 2D observable measurements** without psychological or neurological interpretations.
+
+**Included:**
+- Raw geometric measurements (angles, distances, ratios)
+- Confidence intervals (CI95) for measurements
+- Pose validation information
+- Statistical z-scores and percentiles
+
+**Excluded:**
+- Personality classifications (e.g., "highly_social", "reserved")
+- Impulsiveness levels
+- Neuroscience correlations
+- Psychological trait predictions
+
+```python
+from capa import CoreAnalyzer, AnalysisConfiguration, AnalysisMode
+
+config = AnalysisConfiguration(mode=AnalysisMode.SCIENTIFIC)
+analyzer = CoreAnalyzer(config=config)
+
+result = analyzer.analyze_image("photo.jpg")
+
+# Scientific mode returns raw measurements only
+if result.wd_result:
+    print(f"WD Value: {result.wd_result.wd_value:.3f} cm")
+    print(f"Confidence: {result.wd_result.measurement_confidence:.1%}")
+    # Note: personality_profile will have default/zero values
+    # Note: primary_classification should not be used in scientific context
+
+if result.forehead_result:
+    print(f"Slant Angle: {result.forehead_result.forehead_geometry.slant_angle_degrees:.1f}°")
+    # Note: impulsiveness_level should not be used in scientific context
+
+analyzer.shutdown()
+```
+
+### RESEARCH Mode
+
+The `RESEARCH` mode includes all correlations from peer-reviewed studies **with appropriate disclaimers**.
+
+```python
+config = AnalysisConfiguration(mode=AnalysisMode.RESEARCH)
+analyzer = CoreAnalyzer(config=config)
+
+result = analyzer.analyze_image("photo.jpg")
+
+# Research mode includes disclaimers
+if hasattr(result, 'research_disclaimers') and result.research_disclaimers:
+    print("Research Disclaimers:")
+    for disclaimer in result.research_disclaimers:
+        print(f"  - {disclaimer}")
+
+analyzer.shutdown()
+```
+
+### FAST Mode Behavior
+
+`FAST` mode prioritizes speed and will **abort early** if landmark detection quality is too low:
+
+```python
+config = AnalysisConfiguration(mode=AnalysisMode.FAST)
+analyzer = CoreAnalyzer(config=config)
+
+result = analyzer.analyze_image("photo.jpg")
+
+# Check warnings for early abort
+if result and result.processing_metadata.warnings:
+    for warning in result.processing_metadata.warnings:
+        print(f"Warning: {warning}")
+        # May include: "Aborting analysis due to poor landmarks in FAST mode"
+
+analyzer.shutdown()
+```
+
+### THOROUGH Mode Features
+
+`THOROUGH` mode enables all features including 3D facial reconstruction:
+
+```python
+config = AnalysisConfiguration(mode=AnalysisMode.THOROUGH)
+analyzer = CoreAnalyzer(config=config)
+
+result = analyzer.analyze_image("photo.jpg")
+
+if result.morphology_result:
+    props = result.morphology_result.facial_proportions
+    # 3D-derived measurements available in THOROUGH mode
+    print(f"Facial Volume Estimate: {props.facial_volume_estimate:.1f}")
+    print(f"Facial Surface Area: {props.facial_surface_area:.1f}")
+    print(f"Facial Convexity Angle: {props.facial_convexity_angle:.1f}°")
+
+analyzer.shutdown()
 ```
 
 ---
@@ -122,33 +254,31 @@ partial = AnalysisConfiguration(
 
 ## Quality Settings
 
-### Confidence Thresholds
+### Quality Assessment
 
 ```python
 from capa import AnalysisConfiguration
 
-# High confidence required
-strict_config = AnalysisConfiguration(
-    min_confidence_threshold=0.8,
-    enable_quality_checks=True,
+# Enable quality assessment (default)
+config_with_quality = AnalysisConfiguration(
+    enable_quality_assessment=True,
 )
 
-# Accept lower confidence results
-lenient_config = AnalysisConfiguration(
-    min_confidence_threshold=0.3,
-    enable_quality_checks=False,
+# Disable quality assessment for faster processing
+config_no_quality = AnalysisConfiguration(
+    enable_quality_assessment=False,
 )
 ```
 
-### Quality Check Behavior
+### Quality Assessment Behavior
 
-When `enable_quality_checks=True`:
+When `enable_quality_assessment=True`:
 - Images are validated for minimum resolution
 - Face detection confidence is verified
 - Landmark quality is assessed
-- Results below threshold return `None`
+- Low quality results include warnings in metadata
 
-When `enable_quality_checks=False`:
+When `enable_quality_assessment=False`:
 - All detected faces are analyzed
 - Lower quality results may be returned
 - Confidence scores still indicate reliability
@@ -163,8 +293,7 @@ When `enable_quality_checks=False`:
 from capa.modules import WDAnalyzer
 
 analyzer = WDAnalyzer(
-    min_face_size=50,           # Minimum face size in pixels
-    landmark_confidence=0.7,     # Minimum landmark detection confidence
+    enable_learning=True,        # Enable continuous learning system (default: True)
 )
 ```
 
@@ -174,8 +303,8 @@ analyzer = WDAnalyzer(
 from capa.modules import ForeheadAnalyzer
 
 analyzer = ForeheadAnalyzer(
-    angle_precision=1.0,         # Angle measurement precision (degrees)
-    require_profile=False,       # Require profile view for analysis
+    enable_learning=True,        # Enable continuous learning system (default: True)
+    enable_neuroscience=True,    # Enable neuroscience correlations (default: True)
 )
 ```
 
@@ -185,8 +314,8 @@ analyzer = ForeheadAnalyzer(
 from capa.modules import MorphologyAnalyzer
 
 analyzer = MorphologyAnalyzer(
-    include_secondary_shapes=True,   # Include secondary shape classifications
-    golden_ratio_analysis=True,      # Include golden ratio measurements
+    enable_3d_reconstruction=True,   # Enable 3D facial reconstruction (default: True)
+    enable_learning=True,            # Enable continuous learning system (default: True)
 )
 ```
 
