@@ -91,13 +91,44 @@ class NeoclassicalCanonsAnalyzer:
     peer-reviewed research papers and Farkas principles.
     """
     
+    def _find_dlib_model(self):
+        """Find dlib shape predictor model file in multiple locations"""
+        import os
+        from pathlib import Path
+
+        model_name = "shape_predictor_68_face_landmarks.dat"
+        search_paths = [
+            model_name,  # Current directory
+            os.path.join(os.path.dirname(__file__), model_name),  # Module directory
+            os.path.join(os.path.dirname(__file__), "..", model_name),  # Parent directory
+        ]
+
+        # Try to find in face_recognition_models package
+        try:
+            import face_recognition_models
+            models_path = Path(face_recognition_models.__file__).parent / "models" / model_name
+            search_paths.append(str(models_path))
+        except ImportError:
+            pass
+
+        # Search all paths
+        for path in search_paths:
+            if os.path.exists(path):
+                return path
+
+        return None
+
     def __init__(self):
         """Initialize the neoclassical canons analyzer"""
         self.face_detector = dlib.get_frontal_face_detector()
-        
-        # Use a simple approach for now - we'll need to download the model file
+
+        # Find and load dlib model
         try:
-            self.landmark_predictor = dlib.shape_predictor("shape_predictor_68_face_landmarks.dat")
+            dlib_model_path = self._find_dlib_model()
+            if dlib_model_path:
+                self.landmark_predictor = dlib.shape_predictor(dlib_model_path)
+            else:
+                self.landmark_predictor = None
         except:
             # For testing, we'll create a mock predictor
             self.landmark_predictor = None
@@ -135,11 +166,13 @@ class NeoclassicalCanonsAnalyzer:
                 'validated': True
             },
             # Canon 3: Biocular Width = Five Eye Widths
+            # FIX CAN-001: expected_ratio changed to 1.0 because measurement calculates
+            # avg_eye_width / expected_fifth, which equals 1.0 when perfect
             'canon_3_facial_fifths': {
                 'name': 'Canon 3: Facial Fifths',
-                'expected_ratio': 0.20,  # Each eye width = 1/5 face width
+                'expected_ratio': 1.0,  # Ratio of measured/expected = 1.0 when perfect
                 'tolerance_mm': 1.0,
-                'tolerance_ratio': 0.05,
+                'tolerance_ratio': 0.15,  # Increased tolerance for variability
                 'description': 'Face width = 5 × eye fissure width',
                 'paper_validity': {'male': 0.368, 'female': 0.312},
                 'validated': True
@@ -165,11 +198,13 @@ class NeoclassicalCanonsAnalyzer:
                 'validated': True
             },
             # Canon 6: Nose Width = 1/4 Face Width
+            # FIX CAN-001: expected_ratio changed to 1.0 because measurement calculates
+            # nasal_width / expected_nose, which equals 1.0 when perfect
             'canon_6_nose_face_ratio': {
                 'name': 'Canon 6: Nose = 1/4 Face Width',
-                'expected_ratio': 0.25,
+                'expected_ratio': 1.0,  # Ratio of measured/expected = 1.0 when perfect
                 'tolerance_mm': 1.0,
-                'tolerance_ratio': 0.05,
+                'tolerance_ratio': 0.15,  # Increased tolerance for variability
                 'description': 'Nasal width is one-quarter of bizygomatic width',
                 'paper_validity': {'male': 0.416, 'female': 0.552},
                 'validated': True
