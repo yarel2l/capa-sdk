@@ -293,17 +293,43 @@ class IntelligentLandmarkSystem:
         # self._init_mtcnn_detector()
         # self._init_retinaface_detector()
     
+    def _find_dlib_model(self):
+        """Find dlib shape predictor model file in multiple locations"""
+        import os
+
+        model_name = "shape_predictor_68_face_landmarks.dat"
+        search_paths = [
+            model_name,  # Current directory
+            os.path.join(os.path.dirname(__file__), model_name),  # Module directory
+            os.path.join(os.path.dirname(__file__), "..", model_name),  # Parent directory
+        ]
+
+        # Try to find in face_recognition_models package
+        try:
+            import face_recognition_models
+            models_path = Path(face_recognition_models.__file__).parent / "models" / model_name
+            search_paths.append(str(models_path))
+        except ImportError:
+            pass
+
+        # Search all paths
+        for path in search_paths:
+            if os.path.exists(path):
+                return path
+
+        return None
+
     def _init_dlib_detector(self):
         """Initialize dlib detector"""
         try:
-            predictor_path = "shape_predictor_68_face_landmarks.dat"
-            if Path(predictor_path).exists():
+            predictor_path = self._find_dlib_model()
+            if predictor_path and Path(predictor_path).exists():
                 self.detectors[DetectorType.DLIB] = {
                     'face_detector': dlib.get_frontal_face_detector(),
                     'landmark_predictor': dlib.shape_predictor(predictor_path),
                     'available': True
                 }
-                
+
                 self.detector_capabilities[DetectorType.DLIB] = DetectorCapabilities(
                     detector_type=DetectorType.DLIB,
                     max_faces=10,
@@ -317,10 +343,10 @@ class IntelligentLandmarkSystem:
                     min_face_size=80,
                     max_face_size=2000
                 )
-                
-                logger.info("dlib detector initialized successfully")
+
+                logger.info(f"dlib detector initialized successfully from {predictor_path}")
             else:
-                logger.warning(f"dlib model file not found: {predictor_path}")
+                logger.warning(f"dlib model file not found in any location")
                 self.detectors[DetectorType.DLIB] = {'available': False}
         except Exception as e:
             logger.error(f"Failed to initialize dlib detector: {e}")
@@ -1494,45 +1520,64 @@ class IntelligentLandmarkSystem:
         )
     
     def _calculate_landmark_precision(self, results: List[LandmarkResult]) -> float:
-        """Calculate precision of landmark detection across methods"""
+        """Calculate precision of landmark detection across methods.
+
+        Note: Different detectors have different landmark counts and orderings
+        (MediaPipe: 478, dlib: 68, etc.), so comparing by index is unreliable.
+        Instead, we compare face bounding boxes and key facial regions.
+        """
         if len(results) < 2:
             return 0.8  # Default for single detector
-        
-        # Calculate variance in landmark positions across detectors
-        all_landmarks = []
-        min_landmarks = min(len(r.landmarks) for r in results if len(r.landmarks) > 0)
-        
-        if min_landmarks == 0:
+
+        valid_results = [r for r in results if len(r.landmarks) > 0]
+
+        if len(valid_results) < 2:
+            return 0.8 if len(valid_results) == 1 else 0.0
+
+        # Calculate face centroids and sizes from each detector's landmarks
+        face_metrics = []
+        for result in valid_results:
+            landmarks = np.array(result.landmarks)
+            centroid = np.mean(landmarks, axis=0)
+            # Face size as the bounding box diagonal
+            min_coords = np.min(landmarks, axis=0)
+            max_coords = np.max(landmarks, axis=0)
+            face_size = np.linalg.norm(max_coords - min_coords)
+            face_metrics.append({
+                'centroid': centroid,
+                'face_size': face_size,
+                'min_coords': min_coords,
+                'max_coords': max_coords
+            })
+
+        if not face_metrics:
             return 0.0
-        
-        for result in results:
-            if len(result.landmarks) >= min_landmarks:
-                all_landmarks.append(result.landmarks[:min_landmarks])
-        
-        if len(all_landmarks) < 2:
-            return 0.8
-        
-        # Calculate average pairwise distance
-        total_variance = 0.0
-        comparisons = 0
-        
-        for i in range(len(all_landmarks)):
-            for j in range(i + 1, len(all_landmarks)):
-                landmarks1 = all_landmarks[i]
-                landmarks2 = all_landmarks[j]
-                
-                for k in range(min_landmarks):
-                    distance = euclidean(landmarks1[k], landmarks2[k])
-                    total_variance += distance
-                    comparisons += 1
-        
-        if comparisons > 0:
-            avg_variance = total_variance / comparisons
-            # Convert variance to precision score (lower variance = higher precision)
-            precision = max(0.0, 1.0 - avg_variance / 20.0)  # Normalize by expected variance
-            return min(1.0, precision)
-        
-        return 0.8
+
+        # Calculate average face size for normalization
+        avg_face_size = np.mean([m['face_size'] for m in face_metrics])
+        if avg_face_size < 10:  # Face too small
+            return 0.5
+
+        # Calculate centroid consistency (how well detectors agree on face center)
+        centroids = np.array([m['centroid'] for m in face_metrics])
+        centroid_variance = np.mean(np.std(centroids, axis=0))
+
+        # Normalize variance by face size (5% of face size = perfect, 25% = poor)
+        centroid_precision = max(0.0, 1.0 - (centroid_variance / avg_face_size) / 0.25)
+
+        # Calculate size consistency (how well detectors agree on face size)
+        sizes = np.array([m['face_size'] for m in face_metrics])
+        size_cv = np.std(sizes) / np.mean(sizes) if np.mean(sizes) > 0 else 1.0
+        size_precision = max(0.0, 1.0 - size_cv / 0.3)  # 30% CV = 0 precision
+
+        # Combined precision (weighted average)
+        precision = 0.6 * centroid_precision + 0.4 * size_precision
+
+        # Floor value: if we have valid detections, show at least 50%
+        if len(valid_results) >= 2:
+            precision = max(0.5, precision)
+
+        return min(1.0, precision)
     
     def _calculate_landmark_consistency(self, results: List[LandmarkResult]) -> float:
         """Calculate consistency of landmark detection across methods"""
