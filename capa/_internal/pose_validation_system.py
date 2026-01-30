@@ -4,7 +4,7 @@ Pose Validation System - CAPA (Craniofacial Analysis & Prediction Architecture)
 Validates pose applicability before running analysis modules to prevent
 impossible measurements and improve scientific accuracy.
 
-Version: 1.0
+Version: 1.1
 """
 
 import numpy as np

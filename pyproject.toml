@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "capa-sdk"
-version = "1.0.0"
+version = "1.1.0"
 description = "CAPA - Craniofacial Analysis & Prediction Architecture SDK"
 readme = "README.md"
 license = {text = "MIT"}

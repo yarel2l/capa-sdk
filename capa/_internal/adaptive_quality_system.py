@@ -4,7 +4,7 @@ Adaptive Quality System - CAPA (Craniofacial Analysis & Prediction Architecture)
 Provides dynamic quality control, validation, and adaptive thresholding
 across all scientific analysis modules.
 
-Version: 1.0
+Version: 1.1
 """
 
 import numpy as np

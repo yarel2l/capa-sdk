@@ -4,7 +4,7 @@ Intelligent Landmark System - CAPA (Craniofacial Analysis & Prediction Architect
 This module unifies multi-detector landmark detection with intelligent quality assessment,
 adaptive confidence weighting, and continuous improvement capabilities.
 
-Version: 1.0
+Version: 1.1
 """
 
 # FIRST: Configure clean environment

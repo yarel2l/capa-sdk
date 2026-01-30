@@ -17,7 +17,7 @@ Paper Findings from Turkish Study (N=250 adults):
 - Canon 7 (mouth width = 1.5x nose width): Only 2.4% validity
 - Tolerance used: Deviation ≤1mm from ideal considered "valid"
 
-Version: 1.0
+Version: 1.1
 """
 
 import numpy as np

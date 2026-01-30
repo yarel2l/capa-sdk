@@ -9,7 +9,7 @@ Components:
 - MultiAngleAnalyzer: Multi-angle analysis for same individual
 - ResultsIntegrator: Combines results from multiple analysis modules
 
-Version: 1.0
+Version: 1.1
 """
 
 from .core_analyzer import (
@@ -56,4 +56,4 @@ __all__ = [
 ]
 
 # Version information
-__version__ = '1.0.0'
+__version__ = '1.1.0'

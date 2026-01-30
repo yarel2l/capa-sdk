@@ -10,7 +10,7 @@ Scientific Foundation:
 - "Determinación del Índice Facial Total y Cono Facial en Individuos Chilenos"
 - "Morphology.pdf" and "Morphology (2).pdf"
 
-Version: 1.0
+Version: 1.1
 """
 
 import numpy as np

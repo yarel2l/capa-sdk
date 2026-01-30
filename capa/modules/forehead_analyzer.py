@@ -11,7 +11,7 @@ Scientific Foundation:
 - "Association between self reported impulsiveness and gray matter volume"
 - "La impulsividad y su asociacion con la inclinacion de la frente"
 
-Version: 1.0
+Version: 1.1
 """
 
 import numpy as np

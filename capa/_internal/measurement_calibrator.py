@@ -14,7 +14,7 @@ Calibration Methods:
 3. Facial Feature Reference: Using known average measurements
 4. Manual Calibration: User-provided scale factor
 
-Version: 1.0
+Version: 1.1
 """
 
 import numpy as np

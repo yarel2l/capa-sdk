@@ -4,7 +4,7 @@ Continuous Improvement System - CAPA (Craniofacial Analysis & Prediction Archite
 Provides automated learning, performance optimization, and adaptive improvements
 across all scientific analysis modules.
 
-Version: 1.0
+Version: 1.1
 """
 
 import numpy as np

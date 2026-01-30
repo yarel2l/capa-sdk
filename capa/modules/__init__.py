@@ -10,7 +10,7 @@ Modules:
 - MorphologyAnalyzer: Facial morphology with 3D reconstruction
 - NeoclassicalCanonsAnalyzer: Classical facial proportion analysis
 
-Version: 1.0
+Version: 1.1
 """
 
 from .wd_analyzer import (
@@ -84,4 +84,4 @@ __all__ = [
 ]
 
 # Version information
-__version__ = '1.0.0'
+__version__ = '1.1.0'

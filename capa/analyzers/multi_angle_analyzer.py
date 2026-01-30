@@ -4,7 +4,7 @@ Multi-Angle Analysis System - CAPA (Craniofacial Analysis & Prediction Architect
 Sistema para análisis de múltiples ángulos del mismo individuo.
 Combina y correlaciona información de diferentes vistas faciales.
 
-Version: 1.0
+Version: 1.1
 """
 
 import numpy as np

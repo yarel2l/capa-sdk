@@ -16,7 +16,7 @@ Integration Sources:
 - Morphology Analyzer: Face shape classification (validated)
 - Neoclassical Canons: Proportion analysis (partially validated)
 
-Version: 1.0
+Version: 1.1
 """
 
 import numpy as np

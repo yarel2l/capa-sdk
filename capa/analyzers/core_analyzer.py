@@ -4,7 +4,7 @@ CAPA Core Analyzer - Craniofacial Analysis & Prediction Architecture
 The main orchestrator for comprehensive craniofacial analysis using
 all scientific modules with intelligent coordination and optimization.
 
-Version: 1.0
+Version: 1.1
 """
 
 # FIRST: Configure clean environment (suppress warnings)

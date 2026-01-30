@@ -8,7 +8,7 @@ Scientific Foundation:
 - "Bizygomatic Width and Personality Traits of the Relational Field"
 - "Bizygomatic Width and its Association with Social and Personality Traits in Males"
 
-Version: 1.0
+Version: 1.1
 """
 
 import numpy as np
