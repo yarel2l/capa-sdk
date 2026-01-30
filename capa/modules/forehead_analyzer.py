@@ -318,14 +318,46 @@ class ForeheadAnalyzer:
         
         logger.info(f"Forehead Analyzer v{self.version} initialized")
     
+    def _find_dlib_model(self):
+        """Find dlib shape predictor model file in multiple locations"""
+        import os
+        from pathlib import Path
+
+        model_name = "shape_predictor_68_face_landmarks.dat"
+        search_paths = [
+            model_name,  # Current directory
+            os.path.join(os.path.dirname(__file__), model_name),  # Module directory
+            os.path.join(os.path.dirname(__file__), "..", model_name),  # Parent directory
+        ]
+
+        # Try to find in face_recognition_models package
+        try:
+            import face_recognition_models
+            models_path = Path(face_recognition_models.__file__).parent / "models" / model_name
+            search_paths.append(str(models_path))
+        except ImportError:
+            pass
+
+        # Search all paths
+        for path in search_paths:
+            if os.path.exists(path):
+                return path
+
+        return None
+
     def _init_detectors(self):
         """Initialize multi-detector landmark detection system"""
         # dlib detector
         try:
-            self.dlib_predictor = dlib.shape_predictor("shape_predictor_68_face_landmarks.dat")
-            self.dlib_detector = dlib.get_frontal_face_detector()
-            self.dlib_available = True
-            logger.info("dlib detector initialized for forehead analysis")
+            dlib_model_path = self._find_dlib_model()
+            if dlib_model_path:
+                self.dlib_predictor = dlib.shape_predictor(dlib_model_path)
+                self.dlib_detector = dlib.get_frontal_face_detector()
+                self.dlib_available = True
+                logger.info(f"dlib detector initialized for forehead analysis from {dlib_model_path}")
+            else:
+                logger.warning("dlib shape predictor model not found for forehead analysis")
+                self.dlib_available = False
         except Exception as e:
             logger.warning(f"dlib detector not available: {e}")
             self.dlib_available = False
@@ -1944,14 +1976,23 @@ class ForeheadAnalyzer:
         profile_data['cognitive_impulsiveness'] = attention_normalized  # Map to attentional
         profile_data['non_planning_impulsiveness'] = profile_data.get('non_planning_impulsiveness', nonplanning_normalized * 33 + 11)
 
-        # Store warnings in profile
+        # Store warnings in profile (for logging, not for dataclass)
         profile_data['_validation_warnings'] = warnings
         profile_data['_speculative_warning'] = (
             "NOTE: Only BIS-11 subscale scores are validated by research. "
             "All other derived traits are speculative extrapolations."
         )
 
-        return ImpulsivenessProfile(**profile_data)
+        # Filter only valid fields for ImpulsivenessProfile dataclass
+        valid_fields = {
+            'motor_impulsiveness', 'cognitive_impulsiveness', 'non_planning_impulsiveness',
+            'risk_taking_tendency', 'sensation_seeking', 'reward_sensitivity', 'punishment_sensitivity',
+            'behavioral_inhibition', 'cognitive_control', 'emotional_regulation', 'delay_of_gratification',
+            'intuitive_decision_style', 'analytical_decision_style', 'spontaneous_behavior', 'deliberate_behavior'
+        }
+        filtered_profile_data = {k: v for k, v in profile_data.items() if k in valid_fields}
+
+        return ImpulsivenessProfile(**filtered_profile_data)
     
     def _calculate_neuroscience_correlations(self, angle: float) -> NeuroscienceCorrelations:
         """
