@@ -972,7 +972,7 @@ class CoreAnalyzer:
                 image=image,
                 ethnicity=metadata.ethnic_group or self.config.subject_ethnicity or 'unknown',
                 age=metadata.age or self.config.subject_age,
-                gender=metadata.gender or self.config.subject_gender,
+                gender=metadata.gender or self.config.subject_gender or 'unknown',
                 analysis_id=metadata.analysis_id + "_WD"
             )
             

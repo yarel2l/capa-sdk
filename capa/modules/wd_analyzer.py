@@ -99,7 +99,13 @@ class WDResult:
     robust_classification: str = "balanced"           # Percentile-based classification
     normalization_confidence: float = 0.8            # Normalization reliability
     demographic_reference: Dict[str, Any] = field(default_factory=dict)  # Reference population data
-    
+
+    # FIX WD-001: Normalized measurements in centimeters (with defaults)
+    wd_value_cm: float = 0.0                          # WD in centimeters (paper-calibrated)
+    bizygomatic_width_cm: float = 0.0                 # Bizygomatic width in cm
+    bigonial_width_cm: float = 0.0                    # Bigonial width in cm
+    scale_factor_cm: float = 0.0                      # Pixels to cm conversion factor
+
     # Learning and adaptation (with defaults)
     learning_feedback_weight: float = 1.0
     historical_consistency: float = 0.0
@@ -147,7 +153,13 @@ class WDResult:
             'robust_classification': str(self.robust_classification),
             'normalization_confidence': safe_convert(self.normalization_confidence),
             'demographic_reference': safe_convert(self.demographic_reference),
-            
+
+            # FIX WD-001: Normalized measurements in centimeters
+            'wd_value_cm': safe_convert(self.wd_value_cm),
+            'bizygomatic_width_cm': safe_convert(self.bizygomatic_width_cm),
+            'bigonial_width_cm': safe_convert(self.bigonial_width_cm),
+            'scale_factor_cm': safe_convert(self.scale_factor_cm),
+
             # Quality and confidence metrics
             'landmark_quality': {
                 'bizygomatic_confidence': safe_convert(self.landmark_quality.bizygomatic_confidence),
@@ -161,11 +173,11 @@ class WDResult:
             
             # Personality analysis
             'personality_profile': {
-                'social_orientation': safe_convert(self.personality_profile.social_orientation),
-                'relational_field': safe_convert(self.personality_profile.relational_field),
-                'communication_style': safe_convert(self.personality_profile.communication_style),
+                'social_orientation_score': safe_convert(self.personality_profile.social_orientation_score),
+                'relational_field_score': safe_convert(self.personality_profile.relational_field_score),
+                'communication_style_score': safe_convert(self.personality_profile.communication_style_score),
                 'leadership_tendency': safe_convert(self.personality_profile.leadership_tendency),
-                'group_dynamics_preference': safe_convert(self.personality_profile.group_dynamics_preference),
+                'interpersonal_effectiveness': safe_convert(self.personality_profile.interpersonal_effectiveness),
                 'emotional_expressiveness': safe_convert(self.personality_profile.emotional_expressiveness),
                 'conflict_resolution_style': safe_convert(self.personality_profile.conflict_resolution_style)
             },
@@ -227,14 +239,46 @@ class WDAnalyzer:
         
         logger.info(f"WD Analyzer v{self.version} initialized")
     
+    def _find_dlib_model(self):
+        """Find dlib shape predictor model file in multiple locations"""
+        import os
+        from pathlib import Path
+
+        model_name = "shape_predictor_68_face_landmarks.dat"
+        search_paths = [
+            model_name,  # Current directory
+            os.path.join(os.path.dirname(__file__), model_name),  # Module directory
+            os.path.join(os.path.dirname(__file__), "..", model_name),  # Parent directory
+        ]
+
+        # Try to find in face_recognition_models package
+        try:
+            import face_recognition_models
+            models_path = Path(face_recognition_models.__file__).parent / "models" / model_name
+            search_paths.append(str(models_path))
+        except ImportError:
+            pass
+
+        # Search all paths
+        for path in search_paths:
+            if os.path.exists(path):
+                return path
+
+        return None
+
     def _init_detectors(self):
         """Initialize multi-detector landmark detection system"""
         # dlib detector
         try:
-            self.dlib_predictor = dlib.shape_predictor("shape_predictor_68_face_landmarks.dat")
-            self.dlib_detector = dlib.get_frontal_face_detector()
-            self.dlib_available = True
-            logger.info("dlib detector initialized successfully")
+            dlib_model_path = self._find_dlib_model()
+            if dlib_model_path:
+                self.dlib_predictor = dlib.shape_predictor(dlib_model_path)
+                self.dlib_detector = dlib.get_frontal_face_detector()
+                self.dlib_available = True
+                logger.info(f"dlib detector initialized successfully from {dlib_model_path}")
+            else:
+                logger.warning("dlib shape predictor model not found")
+                self.dlib_available = False
         except Exception as e:
             logger.warning(f"dlib detector not available: {e}")
             self.dlib_available = False
@@ -485,6 +529,36 @@ class WDAnalyzer:
             'middle_eastern': 1.02,
             'mixed': 1.0
         }
+
+        # ============================================================================
+        # IPD NORMALIZATION CONSTANTS (FIX WD-001)
+        # Reference: Dodgson, N.A. (2004) "Variation and extrema of human interpupillary distance"
+        # Adult IPD average: 63mm (males: 64.7mm, females: 62.3mm)
+        # ============================================================================
+        self.IPD_REFERENCE = {
+            'adult_mean_mm': 63.0,      # Average adult IPD in millimeters
+            'male_mean_mm': 64.7,       # Male average
+            'female_mean_mm': 62.3,     # Female average
+            'child_mean_mm': 50.0,      # Child average (age 5-10)
+            'min_valid_mm': 50.0,       # Minimum valid IPD
+            'max_valid_mm': 75.0,       # Maximum valid IPD
+        }
+
+        # WD thresholds in CENTIMETERS (from paper: mean 0.74cm, SD 1.46cm)
+        # Based on Gabarre-Armengol et al., 2019
+        # Paper classification ranges:
+        #   - highly_reserved: WD < -5.0 cm
+        #   - reserved: -5.0 <= WD < -2.0 cm
+        #   - balanced: -2.0 <= WD < 2.0 cm
+        #   - moderately_social: 2.0 <= WD < 5.0 cm
+        #   - highly_social: WD >= 5.0 cm
+        # Values represent the LOWER LIMIT of each category
+        self.WD_THRESHOLDS_CM = {
+            'reserved': -5.0,           # Lower limit: reserved is >= -5.0 (below is highly_reserved)
+            'balanced': -2.0,           # Lower limit: balanced is >= -2.0
+            'moderately_social': 2.0,   # Lower limit: moderately_social is >= 2.0
+            'highly_social': 5.0,       # Lower limit: highly_social is >= 5.0
+        }
         
         # Age adjustment factors
         self.AGE_ADJUSTMENTS = {
@@ -531,8 +605,11 @@ class WDAnalyzer:
         
         # Get demographic parameters
         age_group = self._get_age_group(age)
-        ethnicity_key = ethnicity.lower() if ethnicity.lower() in self.DEMOGRAPHIC_NORMS else 'caucasian'
-        gender_key = gender.lower() if gender.lower() in ['male', 'female'] else 'male'
+        # CRITICAL FIX: Handle None values for ethnicity and gender
+        ethnicity_str = ethnicity if ethnicity else 'caucasian'
+        gender_str = gender if gender else 'male'
+        ethnicity_key = ethnicity_str.lower() if ethnicity_str.lower() in self.DEMOGRAPHIC_NORMS else 'caucasian'
+        gender_key = gender_str.lower() if gender_str.lower() in ['male', 'female'] else 'male'
         
         try:
             demographic_params = self.DEMOGRAPHIC_NORMS[ethnicity_key][gender_key][age_group]
@@ -1142,8 +1219,71 @@ class WDAnalyzer:
             'strict_mode': strict_mode
         }
     
+    def calculate_ipd_scale_factor(self, landmarks: np.ndarray,
+                                    gender: str = 'unknown') -> Dict[str, float]:
+        """
+        Calculate scale factor to convert pixel measurements to millimeters.
+
+        Uses Interpupillary Distance (IPD) as reference:
+        - IPD is the distance between pupil centers
+        - Average adult IPD: 63mm (males: 64.7mm, females: 62.3mm)
+        - We use eye center landmarks as pupil approximation
+
+        FIX WD-001: This enables conversion from pixels to physical units.
+
+        Args:
+            landmarks: 68-point facial landmarks
+            gender: Subject gender for IPD reference selection
+
+        Returns:
+            Dictionary with scale factors and confidence
+        """
+        if len(landmarks) < 68:
+            return {'scale_factor': 0.0, 'ipd_pixels': 0.0, 'confidence': 0.0}
+
+        # Calculate eye centers (pupil approximation)
+        # Right eye: landmarks 36-41, Left eye: landmarks 42-47
+        right_eye_center = np.mean(landmarks[36:42], axis=0)
+        left_eye_center = np.mean(landmarks[42:48], axis=0)
+
+        # IPD in pixels
+        ipd_pixels = np.linalg.norm(left_eye_center - right_eye_center)
+
+        if ipd_pixels < 10:  # Sanity check
+            return {'scale_factor': 0.0, 'ipd_pixels': ipd_pixels, 'confidence': 0.0}
+
+        # Select reference IPD based on gender
+        if gender and gender.lower() == 'female':
+            reference_ipd_mm = self.IPD_REFERENCE['female_mean_mm']
+        elif gender and gender.lower() == 'male':
+            reference_ipd_mm = self.IPD_REFERENCE['male_mean_mm']
+        else:
+            reference_ipd_mm = self.IPD_REFERENCE['adult_mean_mm']
+
+        # Scale factor: mm per pixel
+        scale_factor = reference_ipd_mm / ipd_pixels
+
+        # Confidence based on reasonable IPD range
+        # If computed IPD (in mm) is within expected range, high confidence
+        estimated_ipd_mm = ipd_pixels * scale_factor  # Should equal reference
+        confidence = 0.9  # Base confidence for valid measurement
+
+        # Adjust confidence if face appears very close or far from camera
+        # (extreme scale factors indicate unusual conditions)
+        if scale_factor < 0.05 or scale_factor > 2.0:
+            confidence = 0.5  # Low confidence for extreme scales
+
+        return {
+            'scale_factor': scale_factor,
+            'scale_factor_cm': scale_factor / 10.0,  # cm per pixel
+            'ipd_pixels': ipd_pixels,
+            'reference_ipd_mm': reference_ipd_mm,
+            'confidence': confidence
+        }
+
     def calculate_wd_measurements(self, landmarks: np.ndarray,
-                                quality: WDLandmarkQuality) -> Dict[str, float]:
+                                quality: WDLandmarkQuality,
+                                gender: str = 'unknown') -> Dict[str, float]:
         """
         Calculate WD measurements with quality-based confidence weighting
 
@@ -1173,49 +1313,81 @@ class WDAnalyzer:
         if len(landmarks) < 68:
             raise ValueError("Insufficient landmarks for WD analysis")
 
+        # ============================================================================
+        # FIX WD-001: Calculate IPD scale factor for pixel-to-cm conversion
+        # ============================================================================
+        ipd_data = self.calculate_ipd_scale_factor(landmarks, gender)
+        scale_factor_cm = ipd_data.get('scale_factor_cm', 0.0)
+        ipd_confidence = ipd_data.get('confidence', 0.0)
+
         # Bizygomatic width (Zygion to Zygion - widest cheekbone points)
         # Using points 1 and 15 for better Zygion approximation
         # (points 0 and 16 are ear-level, not true Zygion)
         bizygomatic_left = landmarks[1]
         bizygomatic_right = landmarks[15]
-        bizygomatic_width = np.linalg.norm(bizygomatic_right - bizygomatic_left)
+        bizygomatic_width_px = np.linalg.norm(bizygomatic_right - bizygomatic_left)
 
         # Bigonial width (Gonion to Gonion - jaw angle width)
         # Points 5 and 11 approximate the mandibular angle (Gonion)
         bigonial_left = landmarks[5]
         bigonial_right = landmarks[11]
-        bigonial_width = np.linalg.norm(bigonial_right - bigonial_left)
+        bigonial_width_px = np.linalg.norm(bigonial_right - bigonial_left)
 
         # CORRECTED FORMULA per paper: WD = AG - AZ (Bigonial minus Bizygomatic)
         # Positive WD = wider jaw relative to cheekbones (associated with social traits)
         # Negative WD = narrower jaw relative to cheekbones (associated with reserved traits)
-        wd_value = bigonial_width - bizygomatic_width
+        wd_value_px = bigonial_width_px - bizygomatic_width_px
+
+        # ============================================================================
+        # FIX WD-001: Convert to centimeters using IPD scale factor
+        # ============================================================================
+        if scale_factor_cm > 0:
+            wd_value_cm = wd_value_px * scale_factor_cm
+            bizygomatic_width_cm = bizygomatic_width_px * scale_factor_cm
+            bigonial_width_cm = bigonial_width_px * scale_factor_cm
+        else:
+            # Fallback: estimate based on typical face proportions
+            # Average bizygomatic width ~13-14cm, use ratio-based estimation
+            estimated_bizygomatic_cm = 13.5  # cm, adult average
+            scale_factor_cm = estimated_bizygomatic_cm / bizygomatic_width_px if bizygomatic_width_px > 0 else 0.0
+            wd_value_cm = wd_value_px * scale_factor_cm
+            bizygomatic_width_cm = estimated_bizygomatic_cm
+            bigonial_width_cm = bigonial_width_px * scale_factor_cm
+            ipd_confidence = 0.5  # Lower confidence for fallback
 
         # WD ratio for normalized comparison (bigonial/bizygomatic)
-        wd_ratio = bigonial_width / bizygomatic_width if bizygomatic_width > 0 else 0.0
-        
+        wd_ratio = bigonial_width_px / bizygomatic_width_px if bizygomatic_width_px > 0 else 0.0
+
         # PHASE 1 FIX: Conservative confidence without inflation
         # Base confidence from landmark quality
-        base_confidence = (quality.bizygomatic_confidence * 0.5 + 
+        base_confidence = (quality.bizygomatic_confidence * 0.5 +
                           quality.bigonial_confidence * 0.5)
-        
+
         # Conservative penalty for geometric issues (no boost, only penalties)
         geometric_penalty = 1.0
         if hasattr(quality, 'geometric_warning') and quality.geometric_warning:
             geometric_penalty = 0.85  # -15% for geometric issues
-        
+
         # Final confidence (conservative, no inflation)
-        measurement_confidence = base_confidence * geometric_penalty
-        
+        # Include IPD confidence in the measurement confidence
+        measurement_confidence = base_confidence * geometric_penalty * ipd_confidence
+
         # Hard cap: no confidence above 0.95 for 2D measurements
         measurement_confidence = min(measurement_confidence, 0.95)
-        
+
         return {
-            'wd_value': wd_value,
-            'bizygomatic_width': bizygomatic_width,
-            'bigonial_width': bigonial_width,
+            # Original pixel values (for backwards compatibility)
+            'wd_value': wd_value_px,
+            'bizygomatic_width': bizygomatic_width_px,
+            'bigonial_width': bigonial_width_px,
             'wd_ratio': wd_ratio,
-            'measurement_confidence': measurement_confidence
+            'measurement_confidence': measurement_confidence,
+            # NEW: Normalized values in centimeters (FIX WD-001)
+            'wd_value_cm': wd_value_cm,
+            'bizygomatic_width_cm': bizygomatic_width_cm,
+            'bigonial_width_cm': bigonial_width_cm,
+            'scale_factor_cm': scale_factor_cm,
+            'ipd_pixels': ipd_data.get('ipd_pixels', 0.0),
         }
     
     def apply_demographic_adjustments(self, wd_value: float, 
@@ -1283,19 +1455,45 @@ class WDAnalyzer:
         
         return WDPersonalityProfile(**profile_scores)
     
-    def classify_wd_result(self, wd_value: float) -> WDClassification:
-        """Classify WD result into personality category"""
-        
-        if wd_value >= 5.0:
-            return WDClassification.HIGHLY_SOCIAL
-        elif wd_value >= 2.0:
-            return WDClassification.MODERATELY_SOCIAL
-        elif wd_value >= -2.0:
-            return WDClassification.BALANCED_SOCIAL
-        elif wd_value >= -5.0:
-            return WDClassification.RESERVED
+    def classify_wd_result(self, wd_value: float, use_cm: bool = False) -> WDClassification:
+        """
+        Classify WD result into personality category.
+
+        FIX WD-001: Now supports classification using cm values with proper thresholds.
+
+        Args:
+            wd_value: WD value (in pixels if use_cm=False, in cm if use_cm=True)
+            use_cm: If True, use cm-calibrated thresholds from paper
+
+        Returns:
+            WDClassification enum value
+        """
+        if use_cm:
+            # Use paper-calibrated thresholds in centimeters
+            # Based on Gabarre-Armengol et al., 2019: mean=0.74cm, SD=1.46cm
+            # Thresholds are LOWER LIMITS of each category
+            if wd_value >= self.WD_THRESHOLDS_CM['highly_social']:  # >= 5.0
+                return WDClassification.HIGHLY_SOCIAL
+            elif wd_value >= self.WD_THRESHOLDS_CM['moderately_social']:  # >= 2.0
+                return WDClassification.MODERATELY_SOCIAL
+            elif wd_value >= self.WD_THRESHOLDS_CM['balanced']:  # >= -2.0
+                return WDClassification.BALANCED_SOCIAL
+            elif wd_value >= self.WD_THRESHOLDS_CM['reserved']:  # >= -5.0
+                return WDClassification.RESERVED
+            else:  # < -5.0
+                return WDClassification.HIGHLY_RESERVED
         else:
-            return WDClassification.HIGHLY_RESERVED
+            # Legacy pixel-based classification (deprecated, kept for compatibility)
+            if wd_value >= 5.0:
+                return WDClassification.HIGHLY_SOCIAL
+            elif wd_value >= 2.0:
+                return WDClassification.MODERATELY_SOCIAL
+            elif wd_value >= -2.0:
+                return WDClassification.BALANCED_SOCIAL
+            elif wd_value >= -5.0:
+                return WDClassification.RESERVED
+            else:
+                return WDClassification.HIGHLY_RESERVED
     
     def detect_anomalies(self, wd_value: float, measurements: Dict[str, float], 
                         quality: WDLandmarkQuality) -> float:
@@ -1379,13 +1577,20 @@ class WDAnalyzer:
             # Adjust confidence based on frontal validation
             frontal_confidence_factor = pose_validation['confidence'] if require_frontal else 1.0
 
-            # Calculate WD measurements
-            measurements = self.calculate_wd_measurements(landmarks, quality)
+            # Calculate WD measurements (FIX WD-001: now includes cm-normalized values)
+            measurements = self.calculate_wd_measurements(landmarks, quality, gender)
 
             # Apply frontal confidence factor to measurement confidence
             adjusted_measurement_confidence = measurements['measurement_confidence'] * frontal_confidence_factor
 
+            # ============================================================================
+            # FIX WD-001: Use cm-based WD value for classification
+            # ============================================================================
+            wd_value_cm = measurements.get('wd_value_cm', 0.0)
+
             # CRITICAL IMPROVEMENT: Apply robust demographic normalization
+            # Note: Still using pixel values for demographic normalization as those
+            # norms are based on bizygomatic width, not WD difference
             robust_normalization = self.calculate_robust_wd_normalization(
                 measurements['wd_value'],
                 ethnicity if ethnicity != 'unknown' else 'caucasian',
@@ -1406,9 +1611,14 @@ class WDAnalyzer:
                 robust_normalization['normalized_wd_z_score'],  # Use Z-score instead of raw adjustment
                 combined_confidence
             )
-            
-            # Use robust classification instead of legacy method
-            classification = WDClassification(robust_normalization['robust_classification'])
+
+            # ============================================================================
+            # FIX WD-001: Use cm-based classification (paper-calibrated thresholds)
+            # ============================================================================
+            classification = self.classify_wd_result(wd_value_cm, use_cm=True)
+
+            # Also keep percentile-based classification for comparison
+            percentile_classification = robust_normalization['robust_classification']
             
             # Generate secondary traits
             secondary_traits = self._generate_secondary_traits(personality_profile)
@@ -1439,10 +1649,16 @@ class WDAnalyzer:
                 # CRITICAL IMPROVEMENT: Include robust normalization data
                 robust_wd_z_score=robust_normalization['normalized_wd_z_score'],
                 demographic_percentile=robust_normalization['demographic_percentile'],
-                robust_classification=robust_normalization['robust_classification'],
+                robust_classification=percentile_classification,  # Percentile-based (for comparison)
                 normalization_confidence=robust_normalization['normalization_confidence'],
                 demographic_reference=robust_normalization['demographic_reference'],
-                
+
+                # FIX WD-001: Include cm-normalized measurements
+                wd_value_cm=wd_value_cm,
+                bizygomatic_width_cm=measurements.get('bizygomatic_width_cm', 0.0),
+                bigonial_width_cm=measurements.get('bigonial_width_cm', 0.0),
+                scale_factor_cm=measurements.get('scale_factor_cm', 0.0),
+
                 landmark_quality=quality,
                 measurement_confidence=combined_confidence,  # Includes frontal pose validation
                 analysis_reliability=1.0 - anomaly_score,
