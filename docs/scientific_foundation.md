@@ -8,11 +8,11 @@ All referenced papers are included in the `data/` folder of this repository.
 
 ### WD Analysis (Bizygomatic Width)
 
-The WD (Width Difference) analysis measures the ratio between bizygomatic width and bigonial width, correlating with social personality traits.
+The WD (Width Difference) analysis measures the difference between bizygomatic width and bigonial width, correlating with social personality traits.
 
 | Paper | Key Findings |
 |-------|--------------|
-| **Bizygomatic Width and Personality Traits** | Correlation between facial width and relational field traits |
+| **Bizygomatic Width and Personality Traits** (Gabarre-Armengol et al., 2019) | Correlation between facial width difference and relational field traits. WD mean: 0.74 cm, SD: 1.46 cm |
 | **Bizygomatic Width and Social Traits in Males** | Association with social and personality characteristics |
 | **Gray Matter Volume and Impulsiveness** | Neural correlates of facial measurements |
 
@@ -20,17 +20,20 @@ The WD (Width Difference) analysis measures the ratio between bizygomatic width 
 
 - **Bizygomatic Width**: Distance between the zygomatic arches (cheekbones)
 - **Bigonial Width**: Distance between the gonion points (jaw angles)
-- **WD Ratio**: Bizygomatic / Bigonial width ratio
+- **WD Value**: Bizygomatic - Bigonial width difference (in centimeters)
+- **IPD Normalization**: Interpupillary distance (IPD) is used to convert pixel measurements to centimeters (average adult IPD: 63mm)
 
 #### Classification Ranges
 
-| Classification | WD Ratio | Interpretation |
-|----------------|----------|----------------|
-| Highly Social | > 1.10 | Strong extroversion tendency |
-| Moderately Social | 1.05 - 1.10 | Above average sociability |
-| Balanced | 0.95 - 1.05 | Balanced social orientation |
-| Reserved | 0.90 - 0.95 | Introverted tendency |
-| Highly Reserved | < 0.90 | Strong introversion tendency |
+Based on Gabarre-Armengol et al. (2019), where WD range was -1.55 to 4.0 cm:
+
+| Classification | WD (cm) | Interpretation |
+|----------------|---------|----------------|
+| Highly Social | ≥ 5.0 | Strong extroversion tendency |
+| Moderately Social | 2.0 to 5.0 | Above average sociability |
+| Balanced | -2.0 to 2.0 | Balanced social orientation |
+| Reserved | -5.0 to -2.0 | Introverted tendency |
+| Highly Reserved | < -5.0 | Strong introversion tendency |
 
 ---
 

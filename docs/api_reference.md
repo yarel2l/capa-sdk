@@ -180,7 +180,7 @@ Result from WD (Width Difference) analysis.
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `wd_value` | `float` | WD ratio value |
+| `wd_value` | `float` | WD difference value in centimeters (bizygomatic - bigonial) |
 | `bizygomatic_width` | `float` | Bizygomatic width in pixels |
 | `bigonial_width` | `float` | Bigonial width in pixels |
 | `primary_classification` | `WDClassification` | Social orientation classification |
@@ -193,13 +193,15 @@ Result from WD (Width Difference) analysis.
 from capa import WDClassification
 ```
 
-| Value | WD Range | Description |
-|-------|----------|-------------|
-| `HIGHLY_SOCIAL` | > 1.10 | Strong social orientation |
-| `MODERATELY_SOCIAL` | 1.05 - 1.10 | Above average sociability |
-| `BALANCED_SOCIAL` | 0.95 - 1.05 | Balanced social behavior |
-| `RESERVED` | 0.90 - 0.95 | Reserved personality |
-| `HIGHLY_RESERVED` | < 0.90 | Introverted tendency |
+Based on Gabarre-Armengol et al. (2019) research:
+
+| Value | WD Range (cm) | Description |
+|-------|---------------|-------------|
+| `HIGHLY_SOCIAL` | ≥ 5.0 | Strong social orientation |
+| `MODERATELY_SOCIAL` | 2.0 to 5.0 | Above average sociability |
+| `BALANCED_SOCIAL` | -2.0 to 2.0 | Balanced social behavior |
+| `RESERVED` | -5.0 to -2.0 | Reserved personality |
+| `HIGHLY_RESERVED` | < -5.0 | Introverted tendency |
 
 ### ForeheadResult
 
